@@ -4,10 +4,13 @@ import android.app.Activity
 import android.os.Bundle
 import android.util.Log
 import com.google.android.things.pio.Gpio
+import com.google.android.things.pio.GpioCallback
 import com.google.android.things.pio.PeripheralManager
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import java.io.IOException
+
+
 
 
 /**
@@ -41,10 +44,13 @@ class MainActivity : Activity(), MqttCallback {
         private val clientId = "lens_M8gAXD2AXDuhTkq8y7XzrW6yDkQ"
         private val topic_gestion = "elllabel/gestion"
         private val topic_led = "elllabel/led"
+        private val topic_boton = "elllabel/boton"
     }
 
     private val PIN_LED = "BCM18"
+    private val PIN_BUTTON = "BCM23"
     var mLedGpio: Gpio? = null
+    private var mButtonGpio: Gpio? = null
     lateinit var client: MqttClient
 
 
@@ -54,6 +60,11 @@ class MainActivity : Activity(), MqttCallback {
         try {
             mLedGpio = service.openGpio(PIN_LED)
             mLedGpio?.setDirection(Gpio.DIRECTION_OUT_INITIALLY_LOW)
+            mButtonGpio = service.openGpio(PIN_BUTTON)
+            mButtonGpio?.setDirection(Gpio.DIRECTION_IN)
+            mButtonGpio?.setActiveType(Gpio.ACTIVE_LOW)
+            mButtonGpio?.setEdgeTriggerType(Gpio.EDGE_FALLING)
+            mButtonGpio?.registerGpioCallback(mCallback)
         } catch (e: IOException) {
             Log.e(TAG, "Error en el API PeripheralIO", e)
         }
@@ -114,7 +125,7 @@ class MainActivity : Activity(), MqttCallback {
                 mLedGpio?.value = false
                 Log.d(TAG, "LED OFF!")
             }
-            "Shake!"->{
+            "Shake!" -> {
                 Log.d(TAG, "Parpadeo!")
                 for (i in 0..3) {
                     mLedGpio?.value = true
@@ -135,4 +146,18 @@ class MainActivity : Activity(), MqttCallback {
         Log.d(TAG, "Entrega completa!")
     }
 
+    private val mCallback = GpioCallback {
+        Log.i(TAG, "Botón pulsado!")
+        try {
+            val mensaje = "click!"
+            Log.i(TAG, "Publicando mensaje: $mensaje")
+            val message = MqttMessage(mensaje.toByteArray())
+            message.qos = qos
+            client.publish(topic_boton, message)
+            Log.i(TAG, "Mensaje publicado")
+        } catch (e: MqttException) {
+            Log.e(TAG, "Error en MQTT.", e)
+        }
+        true // Mantenemos el callback activo
+    }
 }
