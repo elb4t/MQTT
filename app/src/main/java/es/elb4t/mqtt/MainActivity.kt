@@ -114,6 +114,15 @@ class MainActivity : Activity(), MqttCallback {
                 mLedGpio?.value = false
                 Log.d(TAG, "LED OFF!")
             }
+            "Shake!"->{
+                Log.d(TAG, "Parpadeo!")
+                for (i in 0..3) {
+                    mLedGpio?.value = true
+                    Thread.sleep(500)
+                    mLedGpio?.value = false
+                    Thread.sleep(500)
+                }
+            }
             else -> Log.d(TAG, "Comando no soportado")
         }
     }
